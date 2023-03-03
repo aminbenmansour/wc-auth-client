@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import AuthClient, { generateNonce } from "@walletconnect/auth-client";
+import AuthClient from "@walletconnect/auth-client";
 import { version } from "@walletconnect/auth-client/package.json";
 import type { NextPage } from "next";
 import { useCallback, useEffect, useState } from "react";
@@ -9,26 +9,33 @@ import SignedInView from "../views/SignedInView";
 
 console.log(`AuthClient@${version}`);
 
+const nonceKey: string = "nonce";
 const Home: NextPage = () => {
   const [client, setClient] = useState<AuthClient | null>();
   const [hasInitialized, setHasInitialized] = useState(false);
   const [uri, setUri] = useState<string>("");
   const [address, setAddress] = useState<string>("");
+  const [nonce, setNonce] = useState("");
 
-  const onSignIn = useCallback(() => {
+  const onSignIn = useCallback(async () => {
     if (!client) return;
+
+    let { customNonce } = await (await fetch("/api/nonce")).json();
+    setNonce(customNonce)
+    console.log(nonce)
     client
       .request({
         aud: window.location.href,
         domain: window.location.hostname.split(".").slice(-2).join("."),
         chainId: "eip155:1",
         type: "eip4361",
-        nonce: generateNonce(),
+        nonce: nonce,
         statement: "Sign in with wallet.",
       })
       .then(({ uri }) => {
         if (uri) {
           setUri(uri);
+          localStorage.setItem(nonceKey, nonce)
         }
       });
   }, [client, setUri]);
